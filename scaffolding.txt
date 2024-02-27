@@ -1,0 +1,1 @@
+Scaffold-DbContext "Server=LAPTOP-FK0CHR8L;Database=todo_db;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
