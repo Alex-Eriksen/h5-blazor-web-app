@@ -1,0 +1,122 @@
+﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using h5_blazor_web_app.Codes
+@using h5_blazor_web_app.Models
+@using Microsoft.AspNetCore.Components
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject TodoDbContext DbContext;
+@rendermode InteractiveServer
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
+
+
+<PageTitle>Home</PageTitle>
+
+<h4>Logged in as: @m_userName</h4>
+@if (m_providedCprNrIsValid)
+{
+    <div>
+        <label>Item</label>
+        <input type="text" maxlength="10" @bind="m_item"/>
+        <button @onclick="submit2" type="button">Add item</button>
+    </div>
+    <p>Data from Database:</p>
+    <ul>
+        @foreach (var item in m_todoLists)
+        {
+            <li>@item.Item</li>
+        }
+    </ul>
+}
+else
+{
+    <div>
+        <label>CPR Nummer</label>
+        <input type="text" @bind="m_cprNr" />
+        <button type="button" @onclick="submit">Indsæt CPR Nummer</button>
+    </div>
+}
+
+@code {
+    private string? m_cprNr { get; set; }
+    private string? m_output;
+    private string? m_item { get; set; }
+    private string? m_userName { get; set; }
+    private bool m_providedCprNrIsValid { get; set; } = false;
+
+    private List<TodoList> m_todoLists { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity!.IsAuthenticated)
+        {
+            m_userName = user.Identity.Name;
+        }
+        else
+        {
+            m_userName = "Guest";
+        }
+
+        m_todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
+    }
+
+    public async void submit()
+    {
+        if (String.IsNullOrEmpty(m_cprNr))
+        {
+            return;
+        }
+
+        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName);
+        if (cpr == null)
+        {
+            await InsertCprNr();
+        }
+
+        HashingHandler hashingHandler = new HashingHandler(m_cprNr!);
+        var hash = hashingHandler.GetHMACHash();
+
+        var cpr1 = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == hash);
+        if (cpr1 == null)
+        {
+            m_providedCprNrIsValid = false;
+            return;
+        }
+        m_providedCprNrIsValid = true;
+    }
+
+    public async void submit2()
+    {
+        await InsertTodoItem();
+    }
+
+    private async Task InsertCprNr()
+    {
+        HashingHandler hashingHandler = new HashingHandler(m_cprNr!);
+
+        var cpr = new Cpr
+        {
+            User = m_userName!,
+            CprNr = hashingHandler.GetHMACHash()
+        };
+
+        DbContext.Cprs.Add(cpr);
+        await DbContext.SaveChangesAsync();
+    }
+
+    private async Task InsertTodoItem()
+    {
+        // Change m_item to be encrypted
+        var todoItem = new TodoList
+        {
+            User = m_userName!,
+            Item = m_item!
+        };
+
+        DbContext.TodoLists.Add(todoItem);
+        await DbContext.SaveChangesAsync();
+    }
+}
