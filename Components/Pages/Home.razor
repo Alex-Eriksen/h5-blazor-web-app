@@ -12,6 +12,8 @@
 
 <PageTitle>Home</PageTitle>
 
+<h1>@hashTest</h1>
+
 <h4>Logged in as: @m_userName</h4>
 <br />
 @if (m_cprValidated)
@@ -39,6 +41,7 @@ else
 }
 
 @code {
+    private string? hashTest { get; set; }
     private string? m_cprNr { get; set; }
     private string? m_item { get; set; }
     private string? m_userName { get; set; }
@@ -48,6 +51,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // HashingHandler hashingHandler = new HashingHandler("HASH");
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
