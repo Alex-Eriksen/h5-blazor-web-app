@@ -13,12 +13,13 @@
 <PageTitle>Home</PageTitle>
 
 <h4>Logged in as: @m_userName</h4>
-@if (m_providedCprNrIsValid)
+<br />
+@if (m_cprValidated)
 {
     <div>
         <label>Item</label>
         <input type="text" maxlength="10" @bind="m_item"/>
-        <button @onclick="submit2" type="button">Add item</button>
+        <button @onclick="AddItem" type="button">Add item</button>
     </div>
     <p>Data from Database:</p>
     <ul>
@@ -33,18 +34,17 @@ else
     <div>
         <label>CPR Nummer</label>
         <input type="text" @bind="m_cprNr" />
-        <button type="button" @onclick="submit">Indsæt CPR Nummer</button>
+        <button type="button" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
     </div>
 }
 
 @code {
     private string? m_cprNr { get; set; }
-    private string? m_output;
     private string? m_item { get; set; }
     private string? m_userName { get; set; }
-    private bool m_providedCprNrIsValid { get; set; } = false;
+    private bool m_cprValidated { get; set; } = false;
 
-    private List<TodoList> m_todoLists { get; set; }
+    private List<TodoList> m_todoLists { get; set; } = new List<TodoList>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,23 +55,16 @@ else
         {
             m_userName = user.Identity.Name;
         }
-        else
-        {
-            m_userName = "Guest";
-        }
-
-        m_todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
     }
 
-    public async void submit()
+    public async void SubmitCpr()
     {
         if (String.IsNullOrEmpty(m_cprNr))
         {
             return;
         }
 
-        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName);
-        if (cpr == null)
+        if(await IsUserAssigned() == false)
         {
             await InsertCprNr();
         }
@@ -79,17 +72,21 @@ else
         HashingHandler hashingHandler = new HashingHandler(m_cprNr!);
         var hash = hashingHandler.GetHMACHash();
 
-        var cpr1 = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == hash);
-        if (cpr1 == null)
+        m_cprValidated = await IsCprValid(hash);
+
+        if (m_cprValidated)
         {
-            m_providedCprNrIsValid = false;
-            return;
+            m_todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
         }
-        m_providedCprNrIsValid = true;
     }
 
-    public async void submit2()
+    public async void AddItem()
     {
+        if (String.IsNullOrEmpty(m_item))
+        {
+            return;
+        }
+
         await InsertTodoItem();
     }
 
@@ -109,7 +106,7 @@ else
 
     private async Task InsertTodoItem()
     {
-        // Change m_item to be encrypted
+        //TODO: Change m_item to be encrypted
         var todoItem = new TodoList
         {
             User = m_userName!,
@@ -117,6 +114,29 @@ else
         };
 
         DbContext.TodoLists.Add(todoItem);
+        m_todoLists.Add(todoItem);
         await DbContext.SaveChangesAsync();
+    }
+
+    private async Task<bool> IsUserAssigned()
+    {
+        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName);
+        if (cpr != null)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<bool> IsCprValid(string cprNr)
+    {
+        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == cprNr);
+        if (cpr != null)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
