@@ -9,5 +9,5 @@ public partial class TodoList
 
     public string User { get; set; } = null!;
 
-    public string Item { get; set; } = null!;
+    public byte[] Item { get; set; } = null!;
 }

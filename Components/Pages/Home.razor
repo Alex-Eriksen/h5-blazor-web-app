@@ -1,9 +1,11 @@
 ﻿@page "/"
 @using Microsoft.EntityFrameworkCore
 @using h5_blazor_web_app.Codes
+@using h5_blazor_web_app.DTO
 @using h5_blazor_web_app.Models
 @using Microsoft.AspNetCore.Components
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AsyncEncryptionHandler asyncEncryption
 @inject TodoDbContext DbContext;
 @rendermode InteractiveServer
 
@@ -12,8 +14,6 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>@hashTest</h1>
-
 <h4>Logged in as: @m_userName</h4>
 <br />
 @if (m_cprValidated)
@@ -21,7 +21,7 @@
     <div>
         <label>Item</label>
         <input type="text" maxlength="10" @bind="m_item"/>
-        <button @onclick="AddItem" type="button">Add item</button>
+        <button @onclick="SubmitItem" type="button">Add item</button>
     </div>
     <p>Data from Database:</p>
     <ul>
@@ -41,13 +41,13 @@ else
 }
 
 @code {
-    private string? hashTest { get; set; }
+    // private string? hashTest { get; set; }
     private string? m_cprNr { get; set; }
     private string? m_item { get; set; }
     private string? m_userName { get; set; }
     private bool m_cprValidated { get; set; } = false;
 
-    private List<TodoList> m_todoLists { get; set; } = new List<TodoList>();
+    private List<TodoListDTO> m_todoLists { get; set; } = new List<TodoListDTO>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,18 +81,25 @@ else
 
         if (m_cprValidated)
         {
-            m_todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
+            m_todoLists = await GetTodoLists();
         }
     }
 
-    public async void AddItem()
+    public void SubmitItem()
     {
         if (String.IsNullOrEmpty(m_item))
         {
             return;
         }
 
-        await InsertTodoItem();
+        InsertTodoItem();
+    }
+
+    private async Task<List<TodoListDTO>> GetTodoLists()
+    {
+        List<TodoList> todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
+        List<TodoListDTO> decryptedList = todoLists.Select(x => new TodoListDTO(){User = x.User, Item = asyncEncryption.Decrypt(x.Item)}).ToList();
+        return decryptedList;
     }
 
     private async Task InsertCprNr()
@@ -109,17 +116,18 @@ else
         await DbContext.SaveChangesAsync();
     }
 
-    private async Task InsertTodoItem()
+    private async void InsertTodoItem()
     {
-        //TODO: Change m_item to be encrypted
+        var itemToAdd = asyncEncryption.Encrypt(m_item!);
+
         var todoItem = new TodoList
         {
             User = m_userName!,
-            Item = m_item!
+            Item = Convert.FromBase64String(itemToAdd)
         };
 
         DbContext.TodoLists.Add(todoItem);
-        m_todoLists.Add(todoItem);
+        m_todoLists.Add(new TodoListDTO(){ User = m_userName, Item = m_item });
         m_item = "";
         await DbContext.SaveChangesAsync();
     }

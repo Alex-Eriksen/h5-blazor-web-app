@@ -18,6 +18,7 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddSingleton<EncryptionHandler>();
+builder.Services.AddSingleton<AsyncEncryptionHandler>();
 
 builder.Services.AddAuthentication(options =>
     {

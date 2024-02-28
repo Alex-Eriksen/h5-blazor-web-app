@@ -37,11 +37,11 @@ public partial class TodoDbContext : DbContext
 
         modelBuilder.Entity<TodoList>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__TodoList__3214EC07674508F1");
+            entity.HasKey(e => e.Id).HasName("PK__TodoList__3214EC07B2FCC953");
 
             entity.ToTable("TodoList");
 
-            entity.Property(e => e.Item).HasMaxLength(500);
+            entity.Property(e => e.Item).HasMaxLength(2049);
             entity.Property(e => e.User).HasMaxLength(500);
         });
 

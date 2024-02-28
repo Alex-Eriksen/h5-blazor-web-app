@@ -1,4 +1,5 @@
 ﻿namespace h5_blazor_web_app.Codes;
+
 using System.Security.Cryptography;
 using System.Text;
 
@@ -6,56 +7,50 @@ public class AsyncEncryptionHandler
 {
     private string m_privateKey;
     private string m_publicKey;
+    public string PublicKey => m_publicKey;
+
+    private readonly string m_privateKeyPath = "./Keys/privateKey.xml";
+    private readonly string m_publicKeyPath = "./Keys/publicKey.xml";
 
     public AsyncEncryptionHandler()
     {
-        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+        if (File.Exists(m_privateKeyPath) && File.Exists(m_publicKeyPath))
         {
-            m_privateKey = rsa.ToXmlString(true);
-            m_publicKey = rsa.ToXmlString(false);
+            m_privateKey = File.ReadAllText(m_privateKeyPath);
+            m_publicKey = File.ReadAllText(m_publicKeyPath);
         }
-    }
-    public enum ReturnType
-    {
-        _string,
-        _byteArray,
-        _utf,
-        _hex,
-        _byte
-    }
-
-    public dynamic Encrypt(string plainText, ReturnType @return = ReturnType._string)
-    {
-        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+        else
         {
-            rsa.FromXmlString(m_publicKey);
-            byte[] bytes = Encoding.UTF8.GetBytes(plainText);
-            byte[] encryptBytes = rsa.Encrypt(bytes, true);
-            return GetReturnType(encryptBytes, @return);
+            using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(2048))
+            {
+                m_privateKey = rsa.ToXmlString(true);
+                m_publicKey = rsa.ToXmlString(false);
+                File.WriteAllText(m_privateKeyPath, m_privateKey);
+                File.WriteAllText(m_publicKeyPath, m_publicKey);
+            }
         }
     }
 
-    public dynamic Decrypt(string encryptedText, ReturnType @return = ReturnType._string)
+    public string Encrypt(string plainText) => AsyncEncrypter.Encrypt(plainText, PublicKey);
+
+    public string Decrypt(string encryptedText)
     {
-        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(2048))
         {
             rsa.FromXmlString(m_privateKey);
-            byte[] bytes = Encoding.UTF8.GetBytes(encryptedText);
+            byte[] bytes = Convert.FromBase64String(encryptedText);
             byte[] decryptBytes = rsa.Decrypt(bytes, true);
-            return GetReturnType(decryptBytes, @return);
+            return Encoding.UTF8.GetString(decryptBytes);
         }
     }
 
-    private static dynamic GetReturnType(byte[] hashBytes, ReturnType @return)
+    public string Decrypt(byte[] bytes)
     {
-        switch (@return)
+        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(2048))
         {
-            case ReturnType._string: return Convert.ToBase64String(hashBytes);
-            case ReturnType._byteArray: return hashBytes;
-            case ReturnType._utf: return Encoding.UTF8.GetString(hashBytes);
-            case ReturnType._hex: return Convert.ToHexString(hashBytes);
-            case ReturnType._byte: return Encoding.Default.GetString(hashBytes);
-            default: return Convert.ToBase64String(hashBytes);
+            rsa.FromXmlString(m_privateKey);
+            byte[] decryptBytes = rsa.Decrypt(bytes, true);
+            return Encoding.UTF8.GetString(decryptBytes);
         }
     }
 }
