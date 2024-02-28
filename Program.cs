@@ -1,3 +1,4 @@
+using h5_blazor_web_app.Codes;
 using h5_blazor_web_app.Components;
 using h5_blazor_web_app.Components.Account;
 using h5_blazor_web_app.Data;
@@ -16,6 +17,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddSingleton<EncryptionHandler>();
 
 builder.Services.AddAuthentication(options =>
     {

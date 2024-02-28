@@ -12,7 +12,16 @@ public class HashingHandler
         m_inputBytes = Encoding.ASCII.GetBytes(textToHash);
     }
 
-    public string GetMD5Hash()
+    public enum ReturnType
+    {
+        _string,
+        _byteArray,
+        _utf,
+        _hex,
+        _byte
+    }
+
+    public dynamic GetMD5Hash(ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
         {
@@ -21,10 +30,11 @@ public class HashingHandler
 
         var md5 = MD5.Create();
         var hashBytes = md5.ComputeHash(m_inputBytes);
-        return Convert.ToBase64String(hashBytes);
+
+        return GetReturnType(hashBytes, @return);
     }
 
-    public string GetSHAHash()
+    public dynamic GetSHAHash(ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
         {
@@ -33,10 +43,11 @@ public class HashingHandler
 
         var sha = SHA256.Create();
         var hashBytes = sha.ComputeHash(m_inputBytes);
-        return Convert.ToBase64String(hashBytes);
+
+        return GetReturnType(hashBytes, @return);
     }
 
-    public string GetHMACHash(string key = "123456789")
+    public dynamic GetHMACHash(string key = "123456789", ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
         {
@@ -45,10 +56,10 @@ public class HashingHandler
 
         var hmac = new HMACSHA256(Encoding.ASCII.GetBytes(key));
         var hashBytes = hmac.ComputeHash(m_inputBytes);
-        return Convert.ToBase64String(hashBytes);
+        return GetReturnType(hashBytes, @return);
     }
 
-    public string GetPBKDF2Hash(string salt, string hashAlgorithmName = "SHA256")
+    public dynamic GetPBKDF2Hash(string salt, string hashAlgorithmName = "SHA256", ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
         {
@@ -59,16 +70,30 @@ public class HashingHandler
         var hashAlgorithm = new HashAlgorithmName(hashAlgorithmName);
 
         byte[] hashBytes = Rfc2898DeriveBytes.Pbkdf2(m_inputBytes, saltBytes, 10, hashAlgorithm, 32);
-        return Convert.ToBase64String(hashBytes);
+        return GetReturnType(hashBytes, @return);
     }
 
-    public static string GetBCryptHash(string textToHash)
+    public static string GetBCryptHash(string textToHash, ReturnType @return = ReturnType._string)
     {
-        return BC.HashPassword(textToHash, 10, true);
+        byte[] hashBytes = Encoding.ASCII.GetBytes(BC.HashPassword(textToHash, 10, true));
+        return GetReturnType(hashBytes, @return);
     }
 
     public static bool VerifyBCrypt(string textToHash, string hashValue)
     {
         return BC.Verify(textToHash, hashValue, true);
+    }
+
+    private static dynamic GetReturnType(byte[] hashBytes, ReturnType @return)
+    {
+        switch (@return)
+        {
+            case ReturnType._string: return Convert.ToBase64String(hashBytes);
+            case ReturnType._byteArray: return hashBytes;
+            case ReturnType._utf: return Encoding.UTF8.GetString(hashBytes);
+            case ReturnType._hex: return Convert.ToHexString(hashBytes);
+            case ReturnType._byte: return Encoding.Default.GetString(hashBytes);
+            default: return Convert.ToBase64String(hashBytes);
+        }
     }
 }

@@ -115,6 +115,7 @@ else
 
         DbContext.TodoLists.Add(todoItem);
         m_todoLists.Add(todoItem);
+        m_item = "";
         await DbContext.SaveChangesAsync();
     }
 
