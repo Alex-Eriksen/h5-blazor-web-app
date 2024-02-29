@@ -20,7 +20,7 @@
 {
     <div>
         <label>Item</label>
-        <input class="form-control" type="text" maxlength="10" @bind="m_item"/>
+        <input class="form-control" type="text" @bind="m_item"/>
         <button class="btn-primary" @onclick="SubmitItem">Add item</button>
     </div>
     <p>Data from Database:</p>
@@ -35,8 +35,9 @@ else
 {
     <div>
         <label>CPR Nummer</label>
-        <input class="form-control" type="text" @bind="m_cprNr" />
+        <input class="form-control" type="text" pattern="([0-9]{10})" @bind="m_cprNr" />
         <button class="btn-primary" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
+        <p class="text-danger">@m_errorMessage</p>
     </div>
 }
 
@@ -45,6 +46,7 @@ else
     private string? m_item { get; set; }
     private string m_userName { get; set; } = null!;
     private bool m_cprValidated { get; set; } = false;
+    private string? m_errorMessage { get; set; }
 
     private List<TodoList> m_todoLists { get; set; } = new List<TodoList>();
 
@@ -63,6 +65,7 @@ else
     {
         if (String.IsNullOrEmpty(m_cprNr))
         {
+            m_errorMessage = "CPR Nummer er påkrævet";
             return;
         }
 
@@ -79,6 +82,10 @@ else
         {
             m_todoLists = await GetTodoLists();
         }
+        else
+        {
+            m_errorMessage = "CPR Nummer er ikke gyldigt";
+        }
     }
 
     public void SubmitItem()
@@ -88,9 +95,7 @@ else
             return;
         }
 
-        byte[] encryptedItemBytes = asyncEncryption.Encrypt(m_item!, Helpers.Helpers.ReturnType._byteArray);
-
-        InsertTodoItem(encryptedItemBytes);
+        InsertTodoItem(asyncEncryption.Encrypt(m_item!, Helpers.Helpers.ReturnType._byteArray));
     }
 
     private async Task<List<TodoList>> GetTodoLists()
@@ -140,9 +145,9 @@ else
         return false;
     }
 
-    private async Task<bool> IsCprValid(string cprNr)
+    private async Task<bool> IsCprValid(string cprHash)
     {
-        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == cprNr);
+        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == cprHash);
         if (cpr != null)
         {
             return true;
