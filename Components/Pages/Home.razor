@@ -1,7 +1,6 @@
 ﻿@page "/"
 @using Microsoft.EntityFrameworkCore
 @using h5_blazor_web_app.Codes
-@using h5_blazor_web_app.DTO
 @using h5_blazor_web_app.Models
 @using Microsoft.AspNetCore.Components
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -21,7 +20,7 @@
     <div>
         <label>Item</label>
         <input class="form-control" type="text" @bind="m_item"/>
-        <button class="btn-primary" @onclick="SubmitItem">Add item</button>
+        <button class="btn btn-primary" @onclick="SubmitItem">Add item</button>
     </div>
     <p>Data from Database:</p>
     <ul>
@@ -35,8 +34,8 @@ else
 {
     <div>
         <label>CPR Nummer</label>
-        <input class="form-control" type="text" pattern="([0-9]{10})" @bind="m_cprNr" />
-        <button class="btn-primary" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
+        <input class="form-control" type="number" maxlength="10" @bind="m_cprNr" />
+        <button class="btn btn-primary" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
         <p class="text-danger">@m_errorMessage</p>
     </div>
 }
@@ -61,6 +60,9 @@ else
         }
     }
 
+    /// <summary>
+    /// Submits the cpr number
+    /// </summary>
     public async void SubmitCpr()
     {
         if (String.IsNullOrEmpty(m_cprNr))
@@ -76,7 +78,7 @@ else
             await InsertCprNr(cprHash);
         }
 
-        m_cprValidated = await IsCprValid(cprHash);
+        m_cprValidated = await IsCprValid();
 
         if (m_cprValidated)
         {
@@ -88,6 +90,9 @@ else
         }
     }
 
+    /// <summary>
+    /// Submits the item to the database
+    /// </summary>
     public void SubmitItem()
     {
         if (String.IsNullOrEmpty(m_item))
@@ -98,14 +103,20 @@ else
         InsertTodoItem(asyncEncryption.Encrypt(m_item!, Helpers.Helpers.ReturnType._byteArray));
     }
 
+    /// <summary>
+    /// Fetches the todo lists from the database
+    /// </summary>
+    /// <returns></returns>
     private async Task<List<TodoList>> GetTodoLists()
     {
-        // List<TodoList> todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
-        // List<TodoListDTO> decryptedList = todoLists.Select(x => new TodoListDTO(){User = x.User, Item = asyncEncryption.Decrypt(x.Item)}).ToList();
-        // return decryptedList;
         return await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
     }
 
+    /// <summary>
+    /// Inserts the cpr number into the database
+    /// </summary>
+    /// <param name="cprHash"></param>
+    /// <returns></returns>
     private async Task InsertCprNr(string cprHash)
     {
         var cpr = new Cpr
@@ -118,6 +129,10 @@ else
         await DbContext.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Inserts the todo item into the database
+    /// </summary>
+    /// <param name="encryptedItemBytes"></param>
     private async void InsertTodoItem(byte[] encryptedItemBytes)
     {
         var todoItem = new TodoList
@@ -134,6 +149,10 @@ else
         await DbContext.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Validates if the user is assigned to a cpr number
+    /// </summary>
+    /// <returns></returns>
     private async Task<bool> IsUserAssigned()
     {
         var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName);
@@ -145,14 +164,19 @@ else
         return false;
     }
 
-    private async Task<bool> IsCprValid(string cprHash)
-    {
-        var cpr = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName && c.CprNr == cprHash);
-        if (cpr != null)
-        {
-            return true;
-        }
 
-        return false;
+    /// <summary>
+    /// Validates if the cpr number is assigned to this user
+    /// </summary>
+    /// <returns></returns>
+    private async Task<bool> IsCprValid()
+    {
+        Cpr? matchedEntry = await DbContext.Cprs.FirstOrDefaultAsync(c => c.User == m_userName);
+        if (matchedEntry == null)
+        {
+            m_errorMessage = "No user found with your username.";
+            return false;
+        }
+        return HashingHandler.VerifyBCrypt(m_cprNr!, matchedEntry!.CprNr);
     }
 }

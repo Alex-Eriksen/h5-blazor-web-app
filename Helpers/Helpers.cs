@@ -12,6 +12,7 @@ public static class Helpers
             case ReturnType._utf: return Encoding.UTF8.GetString(bytes);
             case ReturnType._hex: return Convert.ToHexString(bytes);
             case ReturnType._byte: return Encoding.Default.GetString(bytes);
+            case ReturnType._ascii: return Encoding.ASCII.GetString(bytes);
             default: return Convert.ToBase64String(bytes);
         }
     }
@@ -22,6 +23,7 @@ public static class Helpers
         _byteArray,
         _utf,
         _hex,
-        _byte
+        _byte,
+        _ascii
     }
 }

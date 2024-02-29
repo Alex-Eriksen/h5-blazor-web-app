@@ -14,6 +14,12 @@ public class HashingHandler
         m_inputBytes = Encoding.ASCII.GetBytes(textToHash);
     }
 
+    /// <summary>
+    /// Hashes the input bytes using MD5.
+    /// </summary>
+    /// <param name="return"></param>
+    /// <returns></returns>
+    /// <exception cref="NullReferenceException"></exception>
     public dynamic GetMD5Hash(ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
@@ -27,6 +33,12 @@ public class HashingHandler
         return GetReturnType(hashBytes, @return);
     }
 
+    /// <summary>
+    /// Hashes the input bytes using SHA1.
+    /// </summary>
+    /// <param name="return"></param>
+    /// <returns></returns>
+    /// <exception cref="NullReferenceException"></exception>
     public dynamic GetSHAHash(ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
@@ -40,6 +52,13 @@ public class HashingHandler
         return GetReturnType(hashBytes, @return);
     }
 
+    /// <summary>
+    /// Hashes the input bytes using HMAC.
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="return"></param>
+    /// <returns></returns>
+    /// <exception cref="NullReferenceException"></exception>
     public dynamic GetHMACHash(string key = "123456789", ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
@@ -52,6 +71,14 @@ public class HashingHandler
         return GetReturnType(hashBytes, @return);
     }
 
+    /// <summary>
+    /// Hashes the input bytes using PBKDF2.
+    /// </summary>
+    /// <param name="salt"></param>
+    /// <param name="hashAlgorithmName"></param>
+    /// <param name="return"></param>
+    /// <returns></returns>
+    /// <exception cref="NullReferenceException"></exception>
     public dynamic GetPBKDF2Hash(string salt, string hashAlgorithmName = "SHA256", ReturnType @return = ReturnType._string)
     {
         if (m_inputBytes == null)
@@ -66,12 +93,24 @@ public class HashingHandler
         return GetReturnType(hashBytes, @return);
     }
 
-    public static string GetBCryptHash(string textToHash, ReturnType @return = ReturnType._string)
+    /// <summary>
+    /// Encrypts the <paramref name="textToHash"/> using BCrypt.
+    /// </summary>
+    /// <param name="textToHash"></param>
+    /// <param name="return"></param>
+    /// <returns><paramref name="textToHash"/> as <paramref name="return"/> type.</returns>
+    public static dynamic GetBCryptHash(string textToHash, ReturnType @return = ReturnType._ascii)
     {
         byte[] hashBytes = Encoding.ASCII.GetBytes(BC.HashPassword(textToHash, 10, true));
         return GetReturnType(hashBytes, @return);
     }
 
+    /// <summary>
+    /// Verifies that <paramref name="textToHash"/> hash is equal to <paramref name="hashValue"/>.
+    /// </summary>
+    /// <param name="textToHash"></param>
+    /// <param name="hashValue"></param>
+    /// <returns>true or false depending on the result.</returns>
     public static bool VerifyBCrypt(string textToHash, string hashValue)
     {
         return BC.Verify(textToHash, hashValue, true);
