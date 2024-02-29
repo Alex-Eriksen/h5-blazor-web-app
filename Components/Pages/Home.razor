@@ -20,14 +20,14 @@
 {
     <div>
         <label>Item</label>
-        <input type="text" maxlength="10" @bind="m_item"/>
-        <button @onclick="SubmitItem" type="button">Add item</button>
+        <input class="form-control" type="text" maxlength="10" @bind="m_item"/>
+        <button class="btn-primary" @onclick="SubmitItem">Add item</button>
     </div>
     <p>Data from Database:</p>
     <ul>
         @foreach (var item in m_todoLists)
         {
-            <li>@item.Item</li>
+            <li>@asyncEncryption.Decrypt(@item.Item)</li>
         }
     </ul>
 }
@@ -35,30 +35,27 @@ else
 {
     <div>
         <label>CPR Nummer</label>
-        <input type="text" @bind="m_cprNr" />
-        <button type="button" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
+        <input class="form-control" type="text" @bind="m_cprNr" />
+        <button class="btn-primary" @onclick="SubmitCpr">Indsæt CPR Nummer</button>
     </div>
 }
 
 @code {
-    // private string? hashTest { get; set; }
     private string? m_cprNr { get; set; }
     private string? m_item { get; set; }
-    private string? m_userName { get; set; }
+    private string m_userName { get; set; } = null!;
     private bool m_cprValidated { get; set; } = false;
 
-    private List<TodoListDTO> m_todoLists { get; set; } = new List<TodoListDTO>();
+    private List<TodoList> m_todoLists { get; set; } = new List<TodoList>();
 
     protected override async Task OnInitializedAsync()
     {
-        // HashingHandler hashingHandler = new HashingHandler("HASH");
-
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user.Identity!.IsAuthenticated)
         {
-            m_userName = user.Identity.Name;
+            m_userName = user.Identity.Name!;
         }
     }
 
@@ -69,15 +66,14 @@ else
             return;
         }
 
+        string cprHash = HashingHandler.GetBCryptHash(m_cprNr);
+
         if(await IsUserAssigned() == false)
         {
-            await InsertCprNr();
+            await InsertCprNr(cprHash);
         }
 
-        HashingHandler hashingHandler = new HashingHandler(m_cprNr!);
-        var hash = hashingHandler.GetHMACHash();
-
-        m_cprValidated = await IsCprValid(hash);
+        m_cprValidated = await IsCprValid(cprHash);
 
         if (m_cprValidated)
         {
@@ -92,43 +88,44 @@ else
             return;
         }
 
-        InsertTodoItem();
+        byte[] encryptedItemBytes = asyncEncryption.Encrypt(m_item!, Helpers.Helpers.ReturnType._byteArray);
+
+        InsertTodoItem(encryptedItemBytes);
     }
 
-    private async Task<List<TodoListDTO>> GetTodoLists()
+    private async Task<List<TodoList>> GetTodoLists()
     {
-        List<TodoList> todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
-        List<TodoListDTO> decryptedList = todoLists.Select(x => new TodoListDTO(){User = x.User, Item = asyncEncryption.Decrypt(x.Item)}).ToList();
-        return decryptedList;
+        // List<TodoList> todoLists = await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
+        // List<TodoListDTO> decryptedList = todoLists.Select(x => new TodoListDTO(){User = x.User, Item = asyncEncryption.Decrypt(x.Item)}).ToList();
+        // return decryptedList;
+        return await DbContext.TodoLists.Where(c => c.User == m_userName).ToListAsync();
     }
 
-    private async Task InsertCprNr()
+    private async Task InsertCprNr(string cprHash)
     {
-        HashingHandler hashingHandler = new HashingHandler(m_cprNr!);
-
         var cpr = new Cpr
         {
             User = m_userName!,
-            CprNr = hashingHandler.GetHMACHash()
+            CprNr = cprHash
         };
 
         DbContext.Cprs.Add(cpr);
         await DbContext.SaveChangesAsync();
     }
 
-    private async void InsertTodoItem()
+    private async void InsertTodoItem(byte[] encryptedItemBytes)
     {
-        var itemToAdd = asyncEncryption.Encrypt(m_item!);
-
         var todoItem = new TodoList
         {
             User = m_userName!,
-            Item = Convert.FromBase64String(itemToAdd)
+            Item = encryptedItemBytes
         };
 
         DbContext.TodoLists.Add(todoItem);
-        m_todoLists.Add(new TodoListDTO(){ User = m_userName, Item = m_item });
+
+        m_todoLists.Add(todoItem);
         m_item = "";
+
         await DbContext.SaveChangesAsync();
     }
 

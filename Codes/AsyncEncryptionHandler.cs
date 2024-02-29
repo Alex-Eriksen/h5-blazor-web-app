@@ -2,6 +2,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using static h5_blazor_web_app.Helpers.Helpers;
 
 public class AsyncEncryptionHandler
 {
@@ -31,7 +32,8 @@ public class AsyncEncryptionHandler
         }
     }
 
-    public string Encrypt(string plainText) => AsyncEncrypter.Encrypt(plainText, PublicKey);
+    public dynamic Encrypt(string plainText, ReturnType @return = ReturnType._string) => 
+        AsyncEncrypter.Encrypt(plainText, PublicKey, @return);
 
     public string Decrypt(string encryptedText)
     {

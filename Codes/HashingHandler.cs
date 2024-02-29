@@ -1,6 +1,8 @@
 ﻿using BC = BCrypt.Net.BCrypt;
 using System.Security.Cryptography;
 using System.Text;
+using h5_blazor_web_app.Helpers;
+using static h5_blazor_web_app.Helpers.Helpers;
 
 namespace h5_blazor_web_app.Codes;
 public class HashingHandler
@@ -10,15 +12,6 @@ public class HashingHandler
     public HashingHandler(string textToHash)
     {
         m_inputBytes = Encoding.ASCII.GetBytes(textToHash);
-    }
-
-    public enum ReturnType
-    {
-        _string,
-        _byteArray,
-        _utf,
-        _hex,
-        _byte
     }
 
     public dynamic GetMD5Hash(ReturnType @return = ReturnType._string)
@@ -82,18 +75,5 @@ public class HashingHandler
     public static bool VerifyBCrypt(string textToHash, string hashValue)
     {
         return BC.Verify(textToHash, hashValue, true);
-    }
-
-    private static dynamic GetReturnType(byte[] hashBytes, ReturnType @return)
-    {
-        switch (@return)
-        {
-            case ReturnType._string: return Convert.ToBase64String(hashBytes);
-            case ReturnType._byteArray: return hashBytes;
-            case ReturnType._utf: return Encoding.UTF8.GetString(hashBytes);
-            case ReturnType._hex: return Convert.ToHexString(hashBytes);
-            case ReturnType._byte: return Encoding.Default.GetString(hashBytes);
-            default: return Convert.ToBase64String(hashBytes);
-        }
     }
 }
